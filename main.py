@@ -23,3 +23,10 @@ def is_git_repository() -> bool:
     except subprocess.CalledProcessError:
         # The command failed, meaning we are not inside a Git repository
         return False
+
+
+# Main entry point of the application
+def main() -> None:
+    if not is_git_repository():
+        print("Not inside a Git repository...")
+    print("Git repository detected!")
