@@ -10,6 +10,7 @@ import argparse
 import os
 import sys
 import subprocess
+import questionary
 import openai
 
 # Store the current commit message template for commits generation
@@ -224,24 +225,7 @@ def choose_commit(commits: list[str]) -> str:
     Exits:
         Terminates the program if the user quits.
     """
-    print("\nProposed commit messages:\n")
-
-    for i, commit in enumerate(commits, start=1):
-        print(f"{i}. {commit}")
-
-    while True:
-        choice: str = input("\nSelect commit number (or 'q' to quit): ").strip()
-
-        if choice == "q":
-            sys.exit(0)
-
-        if choice.isdigit():
-            idx: int = int(choice) - 1
-
-            if 0 <= idx < len(commits):
-                return commits[idx]
-
-        print("Invalid choice.")
+    return questionary.select("Proposed commit messages:", commits, qmark="").ask()
 
 
 def main() -> None:
@@ -277,9 +261,7 @@ def main() -> None:
     else:
         commits: list[str] = generate_commit_messages(diff, 1)
         message: str = commits[0]
-
-    print("\nSelected commit message:\n")
-    print(message)
+        print(message)
 
     confirm: str = input("\nCommit with this message? (y/n): ").strip().lower()
 
