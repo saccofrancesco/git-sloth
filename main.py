@@ -1,8 +1,21 @@
 # Importing libraries
+import argparse
 import os
 import sys
 import subprocess
 import openai
+
+
+def parse_args():
+    parser: argparse.ArgumentParser = argparse.ArgumentParser()
+    subparser = parser.add_subparsers(dest="command")
+    list_parser = subparser.add_parser(
+        "list", help="Generate multiple commit suggestions"
+    )
+    list_parser.add_argument(
+        "-n", "--num", type=int, default=5, help="Number of commit suggestions"
+    )
+    return parser.parse_args()
 
 
 def is_git_repository() -> bool:
@@ -43,6 +56,7 @@ def get_staged_diff() -> str:
 
     return result.stdout.strip()
 
+
 def estimate_tokens(text: str) -> int:
     return len(text) // 4
 
@@ -73,7 +87,7 @@ def create_commit(message: str) -> None:
         print(result.stdout)
 
 
-def generate_commit_message(diff: str) -> str:
+def generate_commit_message(diff: str, n: int) -> list[str]:
     """
     Generate a Conventional Commit formatted message based on a Git diff.
 
@@ -95,8 +109,11 @@ def generate_commit_message(diff: str) -> str:
 
     prompt: str = f"""
         You are an expert software engineer that writes precise commit messages
-        following the Conventional Commits specification. Generate a properly
-        formatted commit message based on the provided changes. Follow these rules:
+        following the Conventional Commits specification. 
+
+        Generate {n} different commit messages for the following changes.
+
+        Follow these rules:
 
         1. Use the Conventional Commits format: <type>(optional scope): <short summary>
         2. Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, 
@@ -110,8 +127,8 @@ def generate_commit_message(diff: str) -> str:
         - An exclamation mark after the type/scope (e.g., feat!:)
         - A "BREAKING CHANGE:" section in the footer
         5. Include a body separated by a blank line if additional context is needed.
+        6. Return ONLY the commit messages as a numbered list.
 
-        Now generate a commit message based on the following changes:
         {diff}
         """
 
@@ -128,8 +145,31 @@ def generate_commit_message(diff: str) -> str:
     )
 
     # Extract message text, remove extra newlines, strip whitespace
-    message: str = response.choices[0].message.content.replace("```", "").strip()
-    return message
+    text: str = response.choices[0].message.content.replace("```", "").strip()
+    commits: list[str] = list()
+    for line in text.split("\n"):
+        line: str = line.strip()
+        if not line:
+            continue
+        if "." in line:
+            line: str = line.split(".", 1)[1].strip()
+        commits.append(line)
+    return commits[:n]
+
+
+def choose_commit(commits: list[str]) -> str:
+    print("\nProposed commit changes:\n")
+    for i, commit in enumerate(commits, 1):
+        print(f"{i}. {commit}")
+    while True:
+        choice: str = input("\nSelect commit number (or 'q' to quit): ").strip()
+        if choice == "q":
+            sys.exit(0)
+        if choice.isdigit():
+            idx: int = int(choice) - 1
+            if 0 <= idx <= len(commits):
+                return commits[idx]
+        print("Invalid choice.")
 
 
 def main() -> None:
@@ -143,6 +183,8 @@ def main() -> None:
         4. Ask for user confirmation before committing.
         5. Commit the changes if confirmed.
     """
+    args = parse_args()
+
     if not is_git_repository():
         print("Error: Not inside a Git repository.")
         sys.exit(1)
@@ -156,9 +198,14 @@ def main() -> None:
         print("Max tokens (6k) exceeded.")
         sys.exit(0)
 
-    message: str = generate_commit_message(diff)
-    print("\nProposed Commit message:")
-    print(f"{message}\n")
+    if args.command == "list":
+        commits = generate_commit_message(diff, args.num)
+        message = choose_commit(commits)
+    else:
+        message = generate_commit_message(diff)
+
+    print("\nSelected commit message:\n")
+    print(message)
 
     confirm: str = input("Commit with this message? (y/n): ").strip().lower()
     if confirm != "y":
