@@ -1,6 +1,8 @@
+# Importing libraries
 import os
 import openai
 
+# Creating the commit propmt template to then format with 2 variables and an f-string
 COMMIT_PROMPT_TEMPLATE: str = """
 You are an expert software engineer that writes precise commit messages
 following the Conventional Commits specification.
@@ -34,10 +36,10 @@ Changes:
 """
 
 
+# Estimate the number of tokens based on the input text's length
 def estimate_token_count(text: str) -> int:
     """
     Roughly estimate the number of tokens in a string.
-
     This approximation assumes ~4 characters per token.
 
     Args:
@@ -46,9 +48,13 @@ def estimate_token_count(text: str) -> int:
     Returns:
         Estimated token count.
     """
+
+    # Computing a rough approximation of 4 chars per token
     return len(text) // 4
 
 
+# Based on a diff change output generate an n-number of commits related to the context's
+# changes
 def generate_commit_messages(diff: str, n: int) -> list[str]:
     """
     Generate multiple Conventional Commit messages from a Git diff.
@@ -63,14 +69,19 @@ def generate_commit_messages(diff: str, n: int) -> list[str]:
     Raises:
         EnvironmentError: If the OPENAI_API_KEY is not set.
     """
-    api_key = os.getenv("OPENAI_API_KEY")
 
+    # Get the api key from the env variable of the user
+    api_key: str = os.getenv("OPENAI_API_KEY")
+
+    # Checking if it has founded something; if not raising a missing error
     if not api_key:
         raise EnvironmentError("OPENAI_API_KEY environment variable is not set.")
 
-    client = openai.OpenAI(api_key=api_key)
-    prompt = COMMIT_PROMPT_TEMPLATE.format(diff=diff, n=n)
+    # Create the OpenAI client to do the request of the following formatted prompt f-string
+    client: openai.OpenAI = openai.OpenAI(api_key=api_key)
+    prompt: str = COMMIT_PROMPT_TEMPLATE.format(diff=diff, n=n)
 
+    # Generating a response with the specified payload
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         temperature=0.2,
@@ -83,19 +94,18 @@ def generate_commit_messages(diff: str, n: int) -> list[str]:
         ],
     )
 
-    response_text = response.choices[0].message.content.replace("```", "").strip()
+    # Sanitize the response output for the single commit generation case (where n = 1)
+    response_text: str = response.choices[0].message.content.replace("```", "").strip()
 
-    commits = []
-
+    # Extract generated commits from the model and store them in a list for better use
+    commits: list[str] = list()
     for line in response_text.split("\n"):
-        line = line.strip()
-
+        line: str = line.strip()
         if not line:
             continue
-
         if "." in line:
-            line = line.split(".", 1)[1].strip()
-
+            line: str = line.split(".", 1)[1].strip()
         commits.append(line)
 
-    return commits[:n]
+    # After filling the commits, return the computed list
+    return commits
