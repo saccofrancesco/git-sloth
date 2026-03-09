@@ -11,6 +11,7 @@ import os
 import sys
 import subprocess
 import questionary
+from halo import Halo
 import openai
 
 # Store the current commit message template for commits generation
@@ -153,7 +154,7 @@ def create_commit(message: str) -> None:
     print("Commit created successfully!")
     print(result.stdout)
 
-
+@Halo(text="Generating commit messages...", spinner="dots")
 def generate_commit_messages(diff: str, n: int) -> list[str]:
     """
     Generate multiple Conventional Commit messages from a Git diff.
