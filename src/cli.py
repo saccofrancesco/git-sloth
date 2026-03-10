@@ -114,7 +114,12 @@ def main() -> None:
 
         # Display a loading spinner while generating AI suggestions
         console.print()
-        with console.status("Generating commit messages...", spinner="dots"):
+        loading_message: str = (
+            "Generating the commit message..."
+            if n == 1
+            else "Generating commit messages..."
+        )
+        with console.status(loading_message, spinner="dots"):
             commits: list[str] = generate_commit_messages(diff, n)
 
         # If the user requested multiple suggestions,
