@@ -1,5 +1,10 @@
-# Third-party library for interactive CLI prompts
-import questionary
+# Third-party imports
+import readchar
+from rich.console import Console
+from rich.table import Table
+
+# Create an instance of rich console to use it's custom methods
+console: Console = Console()
 
 
 def choose_commit(commits: list[str]) -> str:
@@ -19,15 +24,35 @@ def choose_commit(commits: list[str]) -> str:
             If the user cancels the prompt (e.g. Ctrl+C).
     """
 
-    # Display an interactive selector
-    choice: str | None = questionary.select(
-        "Proposed commit messages:",
-        choices=commits,
-        qmark="",
-    ).ask()
+    index: int = 0
 
-    # Questionary returns None if the user aborts the prompt
-    if choice is None:
-        raise KeyboardInterrupt("Commit selection aborted by user.")
+    while True:
+        console.clear()
 
-    return choice
+        table: Table = Table(show_header=False, box=None, pad_edge=False)
+
+        for i, commit in enumerate(commits):
+            if i == index:
+                table.add_row(f"[green]> {commit}[/green]")
+            else:
+                table.add_row(f"  {commit}")
+
+        console.print("\n[bold]Proposed commit messages[/bold]\n")
+        console.print(table)
+        console.print(
+            "\n[dim]Use ↑ ↓ to move • Enter to select • Ctrl+C to cancel[/dim]"
+        )
+
+        key: str = readchar.readkey()
+
+        if key == readchar.key.UP:
+            index: int = (index - 1) % len(commits)
+
+        elif key == readchar.key.DOWN:
+            index: int = (index + 1) % len(commits)
+
+        elif key == readchar.key.ENTER:
+            return commits[index]
+
+        elif key == readchar.key.CTRL_C:
+            raise KeyboardInterrupt("Commit selection aborted by user.")

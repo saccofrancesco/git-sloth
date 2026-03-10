@@ -1,6 +1,12 @@
 # Standard library imports
 import subprocess
 
+# Importing third-party librarie for CLI UX
+from rich.console import Console
+
+# Creating a global console to use in all the script
+console: Console = Console()
+
 
 def is_git_repository() -> bool:
     """
@@ -63,7 +69,7 @@ def create_commit(message: str) -> None:
 
     # If the commit failed, propagate the error
     if result.returncode != 0:
-        print(f"Commit failed:\n{result.stderr.strip()}")
+        console.print(f"Commit failed:\n{result.stderr.strip()}")
         raise subprocess.CalledProcessError(
             returncode=result.returncode,
             cmd="git commit",
@@ -72,5 +78,5 @@ def create_commit(message: str) -> None:
         )
 
     # Display Git's output on success
-    print("Commit created successfully!")
-    print(result.stdout.strip())
+    console.print("Commit created successfully!")
+    console.print(result.stdout.strip())

@@ -3,8 +3,8 @@ import sys
 import argparse
 
 # Importing third-party libraries for CLI UX
-from halo import Halo
-import questionary
+from rich.console import Console
+from rich.prompt import Confirm
 
 # Importing project modules for git interaction, AI generation and UI
 from src.git import is_git_repository, get_staged_diff, create_commit
@@ -20,6 +20,9 @@ from src.exceptions import (
 # This protects against excessively large diffs that would exceed
 # the model's context window or unnecessarily increase API cost.
 MAX_TOKEN_ESTIMATE: int = 6_000
+
+# Creating a global console to use in all the script
+console: Console = Console()
 
 
 def parse_args() -> argparse.Namespace:
@@ -110,7 +113,7 @@ def main() -> None:
         n: int = args.num if args.command == "list" else 1
 
         # Display a loading spinner while generating AI suggestions
-        with Halo(text="Generating commit messages...", spinner="dots"):
+        with console.status("Generating commit messages...", spinner="dots"):
             commits: list[str] = generate_commit_messages(diff, n)
 
         # If the user requested multiple suggestions,
@@ -122,10 +125,10 @@ def main() -> None:
             print(message)
 
         # Ask user confirmation before creating the commit
-        confirm: bool = questionary.confirm("Commit with this message?", qmark="").ask()
+        confirm: bool = Confirm.ask("Commit with this message?")
 
         if not confirm:
-            print("Commit aborted.")
+            console.print("Commit aborted.")
             sys.exit(0)
 
         # Create the Git commit using the selected message
@@ -133,5 +136,5 @@ def main() -> None:
 
     # Handle expected CLI errors gracefully
     except (NotARepositoryError, NoStagedChangesError, TokenLimitExceededError) as e:
-        print(f"Error: {e}")
+        console.print(f"Error: {e}")
         sys.exit(1)
