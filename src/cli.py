@@ -4,10 +4,11 @@ import argparse
 
 # Importing third-party libraries for CLI UX
 from rich.console import Console
-from rich.prompt import Confirm
+from rich.prompt import Confirm, Prompt
 
 # Importing project modules for git interaction, AI generation and UI
 from src import __version__
+from src.config import set_api_key
 from src.git import is_git_repository, get_staged_diff, create_commit
 from src.ai import generate_commit_messages, estimate_token_count
 from src.ui import choose_commit
@@ -55,6 +56,24 @@ def parse_args() -> argparse.Namespace:
     # Adding support for subcommands
     subparsers: argparse._SubParsersAction = parser.add_subparsers(dest="command")
 
+    # Subcommand: config
+    # Configure the tool preferences via commandline
+    config_parser: argparse.ArgumentParser = subparsers.add_parser(
+        "config",
+        help="Manage gitsloth configuration",
+    )
+
+    # Non-optional argument: key to specifiy to run the command for setting the api key
+    # securely
+    config_subparsers: argparse._SubParsersAction = config_parser.add_subparsers(
+        dest="config_command",
+    )
+
+    config_subparsers.add_parser(
+        "key",
+        help="Set OpenAI API key",
+    )
+
     # Subcommand: list
     # Generates multiple commit suggestions instead of a single one
     list_parser: argparse.ArgumentParser = subparsers.add_parser(
@@ -100,6 +119,21 @@ def main() -> None:
 
         # Parse CLI arguments
         args: argparse.Namespace = parse_args()
+
+        # Handle config commands
+        if args.command == "config":
+
+            if args.config_command == "key":
+                console.print("\n[bold]Configure OpenAI API key[/bold]\n")
+
+                key: str = Prompt.ask("Enter your OpenAI API key: ", password=True)
+
+                set_api_key(key)
+
+                console.print("\n[green]API key saved successfully![/green]")
+                console.print("You can now use gitsloth.\n")
+
+                sys.exit(0)
 
         # Ensure the command is executed inside a Git repository
         if not is_git_repository():

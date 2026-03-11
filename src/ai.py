@@ -1,7 +1,5 @@
-# Standard library imports
-import os
-
 # Third-party imports
+from src.config import get_api_key
 import openai
 
 
@@ -84,10 +82,12 @@ def generate_commit_messages(diff: str, n: int) -> list[str]:
     """
 
     # Retrieve the API key from environment variables
-    api_key: str | None = os.getenv("OPENAI_API_KEY")
+    api_key: str | None = get_api_key()
 
     if not api_key:
-        raise EnvironmentError("OPENAI_API_KEY environment variable is not set.")
+        raise EnvironmentError(
+            "OpenAI API key not found. Run `gitsloth config key` to configure it."
+        )
 
     # Initialize the OpenAI client
     client: openai.OpenAI = openai.OpenAI(api_key=api_key)
